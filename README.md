@@ -1,41 +1,5 @@
 # Dear ImGui Custom Extensions & Standalone Additions
 
-This repository contains all custom extensions, widgets, backends, and examples that were previously merged directly into Dear ImGui source files.
-
-By extracting these additions into standalone files, you can keep your official Dear ImGui repository completely clean (unmodified upstream `master` or `docking`), enabling seamless updates without merge conflicts.
-
----
-
-## Directory Structure
-
-```text
-imgui-extensions/
-│
-├── imgui_custom.h               # Custom widgets, layout helpers, and drawing extensions
-├── imgui_custom.cpp             # Implementation of all custom widgets
-│
-├── backends/                    # Custom platform backends & helpers
-│   ├── imgui_impl_uwp.h         # Universal Windows Platform (UWP / WinRT) backend header
-│   ├── imgui_impl_uwp.cpp       # Universal Windows Platform backend implementation
-│   ├── imgui_impl_win32_hook.h  # Hooked Win32 input backend header
-│   ├── imgui_impl_win32_hook.cpp# Hooked Win32 input backend implementation
-│   ├── imgui_impl_win32_extra.h # VirtualKeyToImGuiKey helper header
-│   ├── imgui_impl_win32_extra.cpp # VirtualKeyToImGuiKey implementation
-│   ├── imgui_impl_x11.h         # Native X11 Linux backend header
-│   └── imgui_impl_x11.cpp       # Native X11 Linux backend implementation
-│
-└── examples/
-    ├── imgui_uwp_examples.sln   # Visual Studio solution for UWP examples
-    ├── example_uwp_directx11/   # DirectX 11 UWP sample
-    ├── example_uwp_directx12/   # DirectX 12 UWP sample
-    ├── example_uwp_gamebar_directx12/ # Xbox Game Bar DirectX 12 sample
-    ├── example_uwp_swapchainpanel_directx12/ # XAML SwapChainPanel DirectX 12 sample
-    ├── packages/                # NuGet packages required for UWP samples
-    └── custom_menu_demo/        # Example main.cpp demonstrating the custom widgets (tabs, splitter, key selector, etc.)
-```
-
----
-
 ## How to Use in Your Project
 
 ### 1. Widgets & Helpers (`imgui_custom.h`, `imgui_custom.cpp`)
