@@ -345,7 +345,8 @@ void ImGui::AddTextPasses(ImDrawList* draw_list, ImFont* font, float font_size, 
 //-----------------------------------------------------------------------------
 
 bool ImGui::BeginWithIcon(const char* name, bool* p_open, ImGuiWindowFlags flags,
-                          ImTextureID icon_texture, int titleheight)
+                          ImTextureID icon_texture, int titleheight,
+                          ImGuiIconPosition icon_pos)
 {
     ImGuiContext& g = *GImGui;
     const float backup_frame_padding_y = g.Style.FramePadding.y;
@@ -366,12 +367,64 @@ bool ImGui::BeginWithIcon(const char* name, bool* p_open, ImGuiWindowFlags flags
     ImGuiWindow* window = ImGui::GetCurrentWindow();
     if (window && icon_texture != 0 && !(flags & ImGuiWindowFlags_NoTitleBar))
     {
+        const ImGuiStyle& style = g.Style;
         const float iconsize = (titleheight > 0) ? (float)titleheight : (window->TitleBarHeight - backup_frame_padding_y * 2.0f);
-        float pad_l = g.Style.FramePadding.x;
-        if (!(flags & ImGuiWindowFlags_NoCollapse) && (g.Style.WindowMenuButtonPosition == ImGuiDir_Left))
-            pad_l += g.FontSize + g.Style.ItemInnerSpacing.x;
+        const float button_sz = g.FontSize;
+        const bool has_close_button = (p_open != NULL);
+        const bool has_collapse_button = !(flags & ImGuiWindowFlags_NoCollapse) && (style.WindowMenuButtonPosition != ImGuiDir_None);
 
-        const ImVec2 pos(window->Pos.x + pad_l, window->Pos.y + (window->TitleBarHeight - iconsize) * 0.5f);
+        float pad_l = style.FramePadding.x;
+        float pad_r = style.FramePadding.x;
+        if (has_close_button)
+            pad_r += button_sz + style.ItemInnerSpacing.x;
+        if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Right)
+            pad_r += button_sz + style.ItemInnerSpacing.x;
+        if (has_collapse_button && style.WindowMenuButtonPosition == ImGuiDir_Left)
+            pad_l += button_sz + style.ItemInnerSpacing.x;
+
+        float icon_x = window->Pos.x + pad_l;
+
+        if (icon_pos == ImGuiIconPosition_Right)
+        {
+            icon_x = window->Pos.x + window->Size.x - pad_r - iconsize;
+        }
+        else if (icon_pos == ImGuiIconPosition_TitleTextLeft)
+        {
+            const float marker_size_x = (flags & ImGuiWindowFlags_UnsavedDocument) ? button_sz * 0.80f : 0.0f;
+            ImVec2 text_size = CalcTextSize(name, NULL, true);
+            text_size.x += marker_size_x;
+
+            float pad_l_text = pad_l;
+            float pad_r_text = pad_r;
+            if (pad_l_text > style.FramePadding.x)
+                pad_l_text += style.ItemInnerSpacing.x;
+            if (pad_r_text > style.FramePadding.x)
+                pad_r_text += style.ItemInnerSpacing.x;
+
+            if (style.WindowTitleAlign.x > 0.0f && style.WindowTitleAlign.x < 1.0f)
+            {
+                float centerness = ImSaturate(1.0f - ImFabs(style.WindowTitleAlign.x - 0.5f) * 2.0f);
+                float pad_extend = ImMin(ImMax(pad_l_text, pad_r_text), window->Size.x - pad_l_text - pad_r_text - text_size.x);
+                if (pad_extend > 0.0f)
+                {
+                    pad_l_text = ImMax(pad_l_text, pad_extend * centerness);
+                    pad_r_text = ImMax(pad_r_text, pad_extend * centerness);
+                }
+            }
+
+            const float layout_r_min_x = window->Pos.x + pad_l_text;
+            const float layout_r_max_x = window->Pos.x + window->Size.x - pad_r_text;
+            float text_pos_x = layout_r_min_x;
+            if (style.WindowTitleAlign.x > 0.0f)
+                text_pos_x = ImMax(text_pos_x, text_pos_x + (layout_r_max_x - layout_r_min_x - text_size.x) * style.WindowTitleAlign.x);
+
+            icon_x = text_pos_x - iconsize - style.ItemInnerSpacing.x;
+            const float min_icon_x = window->Pos.x + pad_l;
+            if (icon_x < min_icon_x)
+                icon_x = min_icon_x;
+        }
+
+        const ImVec2 pos(icon_x, window->Pos.y + (window->TitleBarHeight - iconsize) * 0.5f);
         const ImVec2 pos_max(pos.x + iconsize, pos.y + iconsize);
 
         ImRect title_bar_rect = window->TitleBarRect();

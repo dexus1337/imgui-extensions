@@ -18,6 +18,13 @@ enum ImGuiCenteredFlags_
     ImGuiCenteredFlags_HorizontalVertical   = ImGuiCenteredFlags_Horizontal | ImGuiCenteredFlags_Vertical
 };
 
+typedef int ImGuiIconPosition;
+enum ImGuiIconPosition_
+{
+    ImGuiIconPosition_Left          = 0, // Far-left of title bar (after collapse button if present)
+    ImGuiIconPosition_Right         = 1, // Far-right of title bar (before close/collapse button)
+    ImGuiIconPosition_TitleTextLeft = 2, // Immediately to the left of the title text (respects style.WindowTitleAlign)
+};
 
 #ifndef ImGuiMouseButton_X1
 #define ImGuiMouseButton_X1 3
@@ -83,8 +90,9 @@ namespace ImGui
                                 const ImVec4* cpu_fine_clip_rect = NULL, int drawcount = 1);
 
     // --- Windows with Icon / Custom Titlebar Height ---
-    // Begins a window with an icon in the titlebar and optional custom titlebar height
+    // Begins a window with an icon in the titlebar, optional custom titlebar height and icon position
     IMGUI_API bool BeginWithIcon(const char* name, bool* p_open = NULL, ImGuiWindowFlags flags = 0,
-                                 ImTextureID icon_texture = 0, int titleheight = 0);
+                                 ImTextureID icon_texture = 0, int titleheight = 0,
+                                 ImGuiIconPosition icon_pos = ImGuiIconPosition_Left);
 }
 

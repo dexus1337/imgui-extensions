@@ -15,7 +15,7 @@ Include the header wherever you use the custom widgets:
 
 #### Layout & Navigation
 * `ImGui::Splitter(name, split_vertically, thickness, &size)`: Interactive splitter widget for resizable multi-pane layouts.
-* `ImGui::BeginWithIcon(name, p_open, flags, icon_texture, titleheight)`: Creates a window with custom icon in the title bar and optional custom title bar height.
+* `ImGui::BeginWithIcon(name, p_open, flags, icon_texture, titleheight, icon_pos)`: Creates a window with custom icon in the title bar (positionable at `ImGuiIconPosition_Left`, `_Right`, or `_TitleTextLeft` next to title text) and optional custom title bar height.
 
 #### Centered & Aligned Text / Labels
 * `ImGui::TextCentered(fmt, ...)`: Centers formatted text horizontally within the current window.
