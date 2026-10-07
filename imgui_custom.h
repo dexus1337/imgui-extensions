@@ -5,7 +5,6 @@
 #pragma once
 
 #include "imgui.h"
-#include "imgui_internal.h"
 
 //-----------------------------------------------------------------------------
 // [SECTION] Custom Flags & Constants
@@ -19,9 +18,6 @@ enum ImGuiCenteredFlags_
     ImGuiCenteredFlags_HorizontalVertical   = ImGuiCenteredFlags_Horizontal | ImGuiCenteredFlags_Vertical
 };
 
-#ifndef ImGuiColorEditFlags_LargeColorOnly
-#define ImGuiColorEditFlags_LargeColorOnly  (1 << 29)
-#endif
 
 #ifndef ImGuiMouseButton_X1
 #define ImGuiMouseButton_X1 3
@@ -68,10 +64,7 @@ namespace ImGui
     IMGUI_API bool InputByte(const char* label, unsigned char* v, unsigned char step = 1, unsigned char step_fast = 1, ImGuiInputTextFlags flags = 0);
 
     // --- Color Editors ---
-    // Overload accepting ImU32 color directly
-    IMGUI_API bool ColorEdit4(const char* label, ImU32* col, ImGuiColorEditFlags flags = 0);
-
-    // Color editor with full-width large preview button (ImGuiColorEditFlags_LargeColorOnly)
+    // Color editor with full-width large preview button (supporting float[4] and ImU32 color)
     IMGUI_API bool ColorEdit4LargePreview(const char* label, float col[4], ImGuiColorEditFlags flags = 0);
     IMGUI_API bool ColorEdit4LargePreview(const char* label, ImU32* col, ImGuiColorEditFlags flags = 0);
 

@@ -28,8 +28,7 @@ Include the header wherever you use the custom widgets:
 * `ImGui::InputByte(label, &byte_val, step, step_fast, flags)`: 8-bit unsigned integer scalar input with decimal or hex display (`ImGuiInputTextFlags_CharsHexadecimal`).
 
 #### Color Editing
-* `ImGui::ColorEdit4(label, ImU32* col, flags)`: Color editor taking a pointer to `ImU32`.
-* `ImGui::ColorEdit4LargePreview(label, col, flags)`: Color editor with full-width preview button bar.
+* `ImGui::ColorEdit4LargePreview(label, col, flags)`: Color editor with full-width preview button bar (supports `float[4]` and `ImU32*`).
 
 #### Text Rendering & Metrics
 * `ImGui::CalcTextSizeForced(size, text, ...)`: Calculates text size for a specific font pixel size.

@@ -1,5 +1,6 @@
 // dear imgui - Custom Extensions & Widgets Implementation
 #include "imgui_custom.h"
+#include "imgui_internal.h"
 #include <float.h>
 
 //-----------------------------------------------------------------------------
@@ -74,12 +75,12 @@ void ImGui::LabelAligned(const char* label, const ImVec2& align)
     const ImVec2 pos = ImVec2(cursor.x + off_x, cursor.y + off_y);
 
     // The item's visual bounding box
-    const ImRect bb(pos, pos + text_size);
+    const ImRect bb(pos, ImVec2(pos.x + text_size.x, pos.y + text_size.y));
 
     // Reserved layout box
     const float reserve_w = text_size.x + ImMax(0.0f, -off_x);
     const float reserve_h = text_size.y + ImMax(0.0f, -off_y);
-    const ImRect reserve_bb(cursor, cursor + ImVec2(reserve_w, reserve_h));
+    const ImRect reserve_bb(cursor, ImVec2(cursor.x + reserve_w, cursor.y + reserve_h));
 
     ItemSize(reserve_bb);
     if (!ItemAdd(bb, window->GetID(label)))
@@ -111,7 +112,7 @@ void ImGui::ImageAlignedWithBg(ImTextureID tex_id, const ImVec2& image_size, con
 
     const float border_size = (border_col.w > 0.0f) ? 1.0f : 0.0f;
     const ImVec2 padding(border_size, border_size);
-    const ImRect bb(window->DC.CursorPos, window->DC.CursorPos + image_size + padding * 2.0f);
+    const ImRect bb(window->DC.CursorPos, ImVec2(window->DC.CursorPos.x + image_size.x + padding.x * 2.0f, window->DC.CursorPos.y + image_size.y + padding.y * 2.0f));
     ItemSize(bb);
     if (!ItemAdd(bb, 0))
         return;
@@ -119,7 +120,7 @@ void ImGui::ImageAlignedWithBg(ImTextureID tex_id, const ImVec2& image_size, con
     if (border_size > 0.0f)
         window->DrawList->AddRect(bb.Min, bb.Max, GetColorU32(border_col), 0.0f, ImDrawFlags_None, border_size);
 
-    window->DrawList->AddImage(tex_id, bb.Min + padding, bb.Max - padding, uv0, uv1, GetColorU32(tint_col));
+    window->DrawList->AddImage(tex_id, ImVec2(bb.Min.x + padding.x, bb.Min.y + padding.y), ImVec2(bb.Max.x - padding.x, bb.Max.y - padding.y), uv0, uv1, GetColorU32(tint_col));
 }
 
 //-----------------------------------------------------------------------------
@@ -136,19 +137,11 @@ bool ImGui::InputByte(const char* label, unsigned char* v, unsigned char step, u
 // [SECTION] Color Editors
 //-----------------------------------------------------------------------------
 
-bool ImGui::ColorEdit4(const char* label, ImU32* col, ImGuiColorEditFlags flags)
+bool ImGui::ColorEdit4LargePreview(const char* label, float col[4], ImGuiColorEditFlags flags)
 {
     if (!col)
         return false;
 
-    ImVec4 src = ColorConvertU32ToFloat4(*col);
-    bool result = ColorEdit4(label, reinterpret_cast<float*>(&src), flags);
-    *col = ColorConvertFloat4ToU32(src);
-    return result;
-}
-
-bool ImGui::ColorEdit4LargePreview(const char* label, float col[4], ImGuiColorEditFlags flags)
-{
     ImGuiWindow* window = GetCurrentWindow();
     if (window->SkipItems)
         return false;
@@ -157,7 +150,11 @@ bool ImGui::ColorEdit4LargePreview(const char* label, float col[4], ImGuiColorEd
     const ImGuiStyle& style = g.Style;
     const float square_sz = GetFrameHeight();
     const float w_total = CalcItemWidth();
-    const ImVec2 pos = window->DC.CursorPos;
+    const char* label_display_end = FindRenderedTextEnd(label);
+    g.NextItemData.ClearFlags();
+
+    BeginGroup();
+    PushID(label);
 
     const ImVec4 col_v4(col[0], col[1], col[2], (flags & ImGuiColorEditFlags_NoAlpha) ? 1.0f : col[3]);
     const ImVec2 button_sz = ImVec2(w_total, square_sz);
@@ -166,25 +163,46 @@ bool ImGui::ColorEdit4LargePreview(const char* label, float col[4], ImGuiColorEd
     if (ColorButton("##ColorButton", col_v4, flags, button_sz))
     {
         if (!(flags & ImGuiColorEditFlags_NoPicker))
+        {
+            g.ColorPickerRef = col_v4;
             OpenPopup("picker");
+            SetNextWindowPos(ImVec2(g.LastItemData.Rect.Min.x, g.LastItemData.Rect.Max.y + style.ItemSpacing.y));
+        }
     }
 
     if (!(flags & ImGuiColorEditFlags_NoOptions))
         OpenPopupOnItemClick("context", ImGuiPopupFlags_MouseButtonRight);
 
+    if (!(flags & ImGuiColorEditFlags_NoOptions))
+        ColorEditOptionsPopup(col, flags);
+
     if (BeginPopup("picker"))
     {
-        ImGuiColorEditFlags picker_flags = (flags & ~ImGuiColorEditFlags_LargeColorOnly);
-        value_changed |= ColorPicker4("##picker", col, picker_flags);
+        if (g.CurrentWindow->BeginCount == 1)
+        {
+            if (label != label_display_end)
+            {
+                TextEx(label, label_display_end);
+                Spacing();
+            }
+            ImGuiColorEditFlags picker_flags_to_forward = ImGuiColorEditFlags_DataTypeMask_ | ImGuiColorEditFlags_PickerMask_ | ImGuiColorEditFlags_InputMask_ | ImGuiColorEditFlags_HDR | ImGuiColorEditFlags_NoAlpha | ImGuiColorEditFlags_AlphaBar;
+            ImGuiColorEditFlags picker_flags = (flags & picker_flags_to_forward) | ImGuiColorEditFlags_DisplayMask_ | ImGuiColorEditFlags_NoLabel | ImGuiColorEditFlags_AlphaPreviewHalf;
+            SetNextItemWidth(square_sz * 12.0f);
+            PushItemFlag(ImGuiItemFlags_MixedValue, false);
+            value_changed |= ColorPicker4("##picker", col, picker_flags, &g.ColorPickerRef.x);
+            PopItemFlag();
+        }
         EndPopup();
     }
 
-    const ImVec2 label_size = CalcTextSize(label, NULL, true);
-    if (label_size.x > 0.0f)
+    if (label != label_display_end && !(flags & ImGuiColorEditFlags_NoLabel))
     {
         SameLine(0.0f, style.ItemInnerSpacing.x);
-        TextEx(label);
+        TextEx(label, label_display_end);
     }
+
+    PopID();
+    EndGroup();
 
     return value_changed;
 }
@@ -194,10 +212,14 @@ bool ImGui::ColorEdit4LargePreview(const char* label, ImU32* col, ImGuiColorEdit
     if (!col)
         return false;
 
-    ImVec4 src = ColorConvertU32ToFloat4(*col);
-    bool result = ColorEdit4LargePreview(label, reinterpret_cast<float*>(&src), flags);
-    *col = ColorConvertFloat4ToU32(src);
-    return result;
+    ImVec4 col_v4 = ColorConvertU32ToFloat4(*col);
+    float f[4] = { col_v4.x, col_v4.y, col_v4.z, col_v4.w };
+    if (ColorEdit4LargePreview(label, f, flags))
+    {
+        *col = ColorConvertFloat4ToU32(ImVec4(f[0], f[1], f[2], (flags & ImGuiColorEditFlags_NoAlpha) ? col_v4.w : f[3]));
+        return true;
+    }
+    return false;
 }
 
 //-----------------------------------------------------------------------------
@@ -326,20 +348,41 @@ bool ImGui::BeginWithIcon(const char* name, bool* p_open, ImGuiWindowFlags flags
                           ImTextureID icon_texture, int titleheight)
 {
     ImGuiContext& g = *GImGui;
-    bool open = ImGui::Begin(name, p_open, flags);
-    ImGuiWindow* window = ImGui::GetCurrentWindow();
-
-    if (window && titleheight > 0 && !(flags & ImGuiWindowFlags_NoTitleBar))
+    const float backup_frame_padding_y = g.Style.FramePadding.y;
+    const bool custom_title_bar = (titleheight > 0) && !(flags & ImGuiWindowFlags_NoTitleBar);
+    if (custom_title_bar)
     {
-        window->TitleBarHeight = (float)titleheight + g.Style.FramePadding.y * 2.0f;
+        // Adjust FramePadding.y so ImGui::Begin calculates TitleBarHeight = titleheight + FramePadding.y * 2
+        g.Style.FramePadding.y = ImMax(0.0f, backup_frame_padding_y + ((float)titleheight - g.FontSize) * 0.5f);
     }
 
-    if (window && icon_texture != 0 && !(flags & ImGuiWindowFlags_NoTitleBar) && !window->Collapsed)
+    bool open = ImGui::Begin(name, p_open, flags);
+
+    if (custom_title_bar)
     {
-        const float iconsize = window->TitleBarHeight - (g.Style.FramePadding.y * 2.0f);
-        const ImVec2 pos(window->Pos.x + g.Style.FramePadding.x, window->Pos.y + g.Style.FramePadding.y);
+        g.Style.FramePadding.y = backup_frame_padding_y;
+    }
+
+    ImGuiWindow* window = ImGui::GetCurrentWindow();
+    if (window && icon_texture != 0 && !(flags & ImGuiWindowFlags_NoTitleBar))
+    {
+        const float iconsize = (titleheight > 0) ? (float)titleheight : (window->TitleBarHeight - backup_frame_padding_y * 2.0f);
+        float pad_l = g.Style.FramePadding.x;
+        if (!(flags & ImGuiWindowFlags_NoCollapse) && (g.Style.WindowMenuButtonPosition == ImGuiDir_Left))
+            pad_l += g.FontSize + g.Style.ItemInnerSpacing.x;
+
+        const ImVec2 pos(window->Pos.x + pad_l, window->Pos.y + (window->TitleBarHeight - iconsize) * 0.5f);
         const ImVec2 pos_max(pos.x + iconsize, pos.y + iconsize);
-        window->DrawList->AddImageRounded(icon_texture, pos, pos_max, ImVec2(0.f, 0.f), ImVec2(1.f, 1.f), 0xffffffff, g.Style.FrameRounding);
+
+        ImRect title_bar_rect = window->TitleBarRect();
+        title_bar_rect.ClipWith(window->OuterRectClipped);
+
+        if (title_bar_rect.Min.x < title_bar_rect.Max.x && title_bar_rect.Min.y < title_bar_rect.Max.y)
+        {
+            window->DrawList->PushClipRect(title_bar_rect.Min, title_bar_rect.Max, false);
+            window->DrawList->AddImageRounded(icon_texture, pos, pos_max, ImVec2(0.f, 0.f), ImVec2(1.f, 1.f), 0xffffffff, g.Style.FrameRounding);
+            window->DrawList->PopClipRect();
+        }
     }
 
     return open;
